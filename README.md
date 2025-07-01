@@ -103,8 +103,8 @@ lib/
 1. **Clone the repository**
 
    ```bash
-   git clone <repository-url>
-   cd daily-tips-app
+   git clone https://github.com/nisanray/AI-Daily-Tips.git
+   cd AI-Daily-Tips
    ```
 2. **Install dependencies**
 
@@ -113,7 +113,7 @@ lib/
    ```
 3. **Get your Gemini API key**
 
-   - Visit [Google AI Studio](https://makersuite.google.com/app/apikey)
+   - Visit [Google AI Studio](https://ai.google.dev)
    - Create a new API key
    - Keep it secure for app configuration
 4. **Run the app**
@@ -234,7 +234,7 @@ We welcome contributions! Please follow these steps:
 
 ### Getting Help
 
-- Check our [Issues](https://github.com/username/daily-tips/issues) page
+- Check our [Issues](https://github.com/nisanray/AI-Daily-Tips/issues) page
 - Join our community discussions
 - Contact support for critical issues
 
@@ -262,6 +262,3 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 **Built with ❤️ using Flutter and Google Gemini AI**
 
 *Transform your daily learning with AI-powered insights and tips tailored just for you.*
-#   A I - D a i l y - T i p s 
- 
- 
