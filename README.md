@@ -1,4 +1,4 @@
-# 💡AI Daily Tips - AI-Powered Learning Companion
+## 💡AI Daily Tips - AI-Powered Learning Companion
 
 A sophisticated Flutter application that generates personalized daily tips using Google's Gemini AI. Get detailed, educational content tailored to your interests with advanced features for learning and productivity.
 
@@ -262,5 +262,6 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 **Built with ❤️ using Flutter and Google Gemini AI**
 
 *Transform your daily learning with AI-powered insights and tips tailored just for you.*
-#   A I - D a i l y - T i p s  
+#   A I - D a i l y - T i p s 
+ 
  
