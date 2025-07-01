@@ -15,7 +15,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   final List<WelcomePage> _pages = [
     WelcomePage(
       icon: CupertinoIcons.lightbulb,
-      title: 'Welcome to Daily Tips',
+      title: 'Welcome to AI Daily Tips',
       description:
           'Get personalized tips and insights to improve your daily life.',
       color: CupertinoColors.systemBlue,

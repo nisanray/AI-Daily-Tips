@@ -105,7 +105,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return CupertinoApp(
       debugShowCheckedModeBanner: false,
-      title: 'Daily Tips',
+      title: 'AI Daily Tips',
       theme: const CupertinoThemeData(
         primaryColor: CupertinoColors.activeBlue,
         brightness: Brightness.light,
