@@ -72,7 +72,7 @@ A sophisticated Flutter application that generates personalized daily tips using
 3. **Get your Gemini API key**
 
    - Visit [Google AI Studio](https://aistudio.google.com/app/apikey)
-   - Create a new API key
+   - Create a new API key(Get the gemini-2.0-flash)
    - Keep it secure for app configuration
 
 4. **Run the app**
