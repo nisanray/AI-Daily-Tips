@@ -85,10 +85,10 @@ class GeminiModel {
 
   /// Get display info with cost indicator
   String get displayInfo {
-    final costIndicator = costPerToken <= 0.5 
-        ? '💚 Low cost' 
-        : costPerToken <= 1.0 
-            ? '💛 Standard' 
+    final costIndicator = costPerToken <= 0.5
+        ? '💚 Low cost'
+        : costPerToken <= 1.0
+            ? '💛 Standard'
             : '🔶 Premium';
     return '$displayName • $costIndicator';
   }

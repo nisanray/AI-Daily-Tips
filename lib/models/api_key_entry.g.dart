@@ -20,19 +20,22 @@ class ApiKeyEntryAdapter extends TypeAdapter<ApiKeyEntry> {
       key: fields[0] as String,
       addedAt: fields[1] as DateTime?,
       nickname: fields[2] as String?,
+      modelId: fields[3] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, ApiKeyEntry obj) {
     writer
-      ..writeByte(3)
+      ..writeByte(4)
       ..writeByte(0)
       ..write(obj.key)
       ..writeByte(1)
       ..write(obj.addedAt)
       ..writeByte(2)
-      ..write(obj.nickname);
+      ..write(obj.nickname)
+      ..writeByte(3)
+      ..write(obj.modelId);
   }
 
   @override

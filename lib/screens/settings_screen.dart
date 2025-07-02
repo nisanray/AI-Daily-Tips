@@ -3,7 +3,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:hive/hive.dart';
 import 'notification_settings_screen.dart';
 import '../services/notifications.dart';
-import '../models/gemini_model.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -16,7 +15,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _notificationsEnabled = true;
   bool _autoGenerateTips = false;
   int _dailyTipCount = 1;
-  String _selectedModelId = GeminiModel.defaultModel.id;
 
   @override
   void initState() {
@@ -31,7 +29,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           settings.get('notificationsEnabled', defaultValue: true);
       _autoGenerateTips = settings.get('autoGenerateTips', defaultValue: false);
       _dailyTipCount = settings.get('dailyTipCount', defaultValue: 1);
-      _selectedModelId = settings.get('selectedModelId', defaultValue: GeminiModel.defaultModel.id);
     });
   }
 
@@ -40,7 +37,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await settings.put('notificationsEnabled', _notificationsEnabled);
     await settings.put('autoGenerateTips', _autoGenerateTips);
     await settings.put('dailyTipCount', _dailyTipCount);
-    await settings.put('selectedModelId', _selectedModelId);
   }
 
   void _showTipCountSelector() {
@@ -57,97 +53,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     Navigator.pop(context);
                   },
                   child: Text('$count tip${count > 1 ? 's' : ''} per day'),
-                ))
-            .toList(),
-        cancelButton: CupertinoActionSheetAction(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
-      ),
-    );
-  }
-
-  void _showModelSelector() {
-    showCupertinoModalPopup(
-      context: context,
-      builder: (context) => CupertinoActionSheet(
-        title: const Text('AI Model Selection'),
-        message: const Text('Choose the Gemini model for tip generation'),
-        actions: GeminiModel.availableModels
-            .map((model) => CupertinoActionSheetAction(
-                  onPressed: () {
-                    setState(() => _selectedModelId = model.id);
-                    _saveSettings();
-                    Navigator.pop(context);
-                  },
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  model.displayName,
-                                  style: TextStyle(
-                                    fontWeight: _selectedModelId == model.id 
-                                        ? FontWeight.w600 
-                                        : FontWeight.normal,
-                                    color: _selectedModelId == model.id 
-                                        ? CupertinoColors.activeBlue 
-                                        : null,
-                                  ),
-                                ),
-                                if (model.isRecommended) ...[
-                                  const SizedBox(height: 4),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: CupertinoColors.activeGreen.withOpacity(0.2),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: const Text(
-                                      'RECOMMENDED',
-                                      style: TextStyle(
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.w600,
-                                        color: CupertinoColors.activeGreen,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                          if (_selectedModelId == model.id) ...[
-                            const SizedBox(width: 8),
-                            const Icon(
-                              CupertinoIcons.checkmark_circle_fill,
-                              color: CupertinoColors.activeBlue,
-                              size: 16,
-                            ),
-                          ],
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        model.description,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: CupertinoColors.secondaryLabel,
-                        ),
-                      ),
-                      Text(
-                        model.displayInfo,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: CupertinoColors.tertiaryLabel,
-                        ),
-                      ),
-                    ],
-                  ),
                 ))
             .toList(),
         cancelButton: CupertinoActionSheetAction(
@@ -204,13 +109,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       '$_dailyTipCount tip${_dailyTipCount > 1 ? 's' : ''} per day'),
                   trailing: const Icon(CupertinoIcons.chevron_right),
                   onTap: _showTipCountSelector,
-                ),
-                CupertinoListTile(
-                  leading: const Icon(CupertinoIcons.sparkles),
-                  title: const Text('AI Model'),
-                  subtitle: Text(GeminiModel.getModelById(_selectedModelId)?.displayName ?? 'Unknown'),
-                  trailing: const Icon(CupertinoIcons.chevron_right),
-                  onTap: _showModelSelector,
                 ),
               ],
             ),

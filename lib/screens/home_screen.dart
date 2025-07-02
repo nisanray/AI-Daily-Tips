@@ -948,10 +948,20 @@ CRITICAL REQUIREMENTS:
 
 Future<String> fetchGeminiTip(String apiKey, String prompt) async {
   try {
-    // Get the selected model from settings
+    // Get the selected API key and its associated model
     final settings = Hive.box('settings');
-    final selectedModelId = settings.get('selectedModelId', defaultValue: GeminiModel.defaultModel.id);
-    final selectedModel = GeminiModel.getModelById(selectedModelId) ?? GeminiModel.defaultModel;
+    final apiKeyBox = Hive.box<ApiKeyEntry>('apiKeys');
+    final selectedApiKeyIndex = settings.get('selectedApiKeyIndex', defaultValue: 0);
+    
+    GeminiModel selectedModel = GeminiModel.defaultModel;
+    
+    // Try to get the model from the selected API key
+    if (selectedApiKeyIndex < apiKeyBox.length) {
+      final selectedApiKey = apiKeyBox.getAt(selectedApiKeyIndex);
+      if (selectedApiKey != null) {
+        selectedModel = selectedApiKey.model;
+      }
+    }
     
     final url = Uri.parse(selectedModel.generateApiUrl(apiKey));
     final body = jsonEncode({
@@ -967,7 +977,8 @@ Future<String> fetchGeminiTip(String apiKey, String prompt) async {
         'temperature': 0.7,
         'topK': 40,
         'topP': 0.95,
-        'maxOutputTokens': selectedModel.maxTokens > 8192 ? 8192 : selectedModel.maxTokens,
+        'maxOutputTokens':
+            selectedModel.maxTokens > 8192 ? 8192 : selectedModel.maxTokens,
       },
       'safetySettings': [
         {

@@ -71,45 +71,126 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen> {
   }
 
   void _showAddApiKeyDialog() {
-    final controller = TextEditingController();
+    final keyController = TextEditingController();
+    final nicknameController = TextEditingController();
+    String selectedModelId = GeminiModel.defaultModel.id;
+
     showCupertinoDialog(
       context: context,
-      builder: (context) => CupertinoAlertDialog(
-        title: const Text('Add API Key'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 16),
-            CupertinoTextField(
-              controller: controller,
-              placeholder: 'Enter your Gemini API key',
-              obscureText: true,
-              maxLines: 1,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => CupertinoAlertDialog(
+          title: const Text('Add API Key'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 16),
+              CupertinoTextField(
+                controller: keyController,
+                placeholder: 'Enter your Gemini API key',
+                obscureText: true,
+                maxLines: 1,
+              ),
+              const SizedBox(height: 12),
+              CupertinoTextField(
+                controller: nicknameController,
+                placeholder: 'Nickname (optional)',
+                maxLines: 1,
+              ),
+              const SizedBox(height: 16),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: CupertinoColors.systemGrey6,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'AI Model',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: CupertinoColors.secondaryLabel,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    GestureDetector(
+                      onTap: () {
+                        _showModelSelector(selectedModelId, (newModelId) {
+                          setDialogState(() {
+                            selectedModelId = newModelId;
+                          });
+                        });
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 8, horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: CupertinoColors.systemBackground,
+                          borderRadius: BorderRadius.circular(6),
+                          border:
+                              Border.all(color: CupertinoColors.systemGrey4),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                GeminiModel.getModelById(selectedModelId)
+                                        ?.displayName ??
+                                    'Unknown',
+                                style: const TextStyle(fontSize: 14),
+                              ),
+                            ),
+                            const Icon(
+                              CupertinoIcons.chevron_down,
+                              size: 16,
+                              color: CupertinoColors.systemGrey,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            CupertinoDialogAction(
+              child: const Text('Cancel'),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            CupertinoDialogAction(
+              child: const Text('Add'),
+              onPressed: () async {
+                if (keyController.text.trim().isNotEmpty) {
+                  await _addApiKey(
+                    keyController.text.trim(),
+                    nickname: nicknameController.text.trim().isEmpty
+                        ? null
+                        : nicknameController.text.trim(),
+                    modelId: selectedModelId,
+                  );
+                  Navigator.of(context).pop();
+                }
+              },
             ),
           ],
         ),
-        actions: [
-          CupertinoDialogAction(
-            child: const Text('Cancel'),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-          CupertinoDialogAction(
-            child: const Text('Add'),
-            onPressed: () async {
-              if (controller.text.trim().isNotEmpty) {
-                await _addApiKey(controller.text.trim());
-                Navigator.of(context).pop();
-              }
-            },
-          ),
-        ],
       ),
     );
   }
 
-  Future<void> _addApiKey(String key) async {
+  Future<void> _addApiKey(String key,
+      {String? nickname, String? modelId}) async {
     final apiKeyBox = Hive.box<ApiKeyEntry>('apiKeys');
-    await apiKeyBox.add(ApiKeyEntry(key: key));
+    await apiKeyBox.add(ApiKeyEntry(
+      key: key,
+      nickname: nickname,
+      modelId: modelId,
+    ));
     _showSnackbar('API key added successfully!',
         color: CupertinoColors.activeGreen);
   }
@@ -140,13 +221,223 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen> {
     );
   }
 
-  Future<void> _testApiKey(String key) async {
+  void _showModelSelector(
+      String currentModelId, Function(String) onModelSelected) {
+    showCupertinoModalPopup(
+      context: context,
+      builder: (context) => CupertinoActionSheet(
+        title: const Text('Select AI Model'),
+        message: const Text('Choose the Gemini model for this API key'),
+        actions: GeminiModel.availableModels
+            .map((model) => CupertinoActionSheetAction(
+                  onPressed: () {
+                    onModelSelected(model.id);
+                    Navigator.pop(context);
+                  },
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  model.displayName,
+                                  style: TextStyle(
+                                    fontWeight: currentModelId == model.id
+                                        ? FontWeight.w600
+                                        : FontWeight.normal,
+                                    color: currentModelId == model.id
+                                        ? CupertinoColors.activeBlue
+                                        : null,
+                                  ),
+                                ),
+                                if (model.isRecommended) ...[
+                                  const SizedBox(height: 4),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: CupertinoColors.activeGreen
+                                          .withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: const Text(
+                                      'RECOMMENDED',
+                                      style: TextStyle(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w600,
+                                        color: CupertinoColors.activeGreen,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          if (currentModelId == model.id) ...[
+                            const SizedBox(width: 8),
+                            const Icon(
+                              CupertinoIcons.checkmark_circle_fill,
+                              color: CupertinoColors.activeBlue,
+                              size: 16,
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        model.description,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: CupertinoColors.secondaryLabel,
+                        ),
+                      ),
+                      Text(
+                        model.displayInfo,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: CupertinoColors.tertiaryLabel,
+                        ),
+                      ),
+                    ],
+                  ),
+                ))
+            .toList(),
+        cancelButton: CupertinoActionSheetAction(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+      ),
+    );
+  }
+
+  void _showEditApiKeyDialog(int index, ApiKeyEntry apiKey) {
+    final nicknameController =
+        TextEditingController(text: apiKey.nickname ?? '');
+    String selectedModelId = apiKey.modelId;
+
+    showCupertinoDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => CupertinoAlertDialog(
+          title: const Text('Edit API Key'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 16),
+              CupertinoTextField(
+                controller: nicknameController,
+                placeholder: 'Nickname (optional)',
+                maxLines: 1,
+              ),
+              const SizedBox(height: 16),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: CupertinoColors.systemGrey6,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'AI Model',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: CupertinoColors.secondaryLabel,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    GestureDetector(
+                      onTap: () {
+                        _showModelSelector(selectedModelId, (newModelId) {
+                          setDialogState(() {
+                            selectedModelId = newModelId;
+                          });
+                        });
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 8, horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: CupertinoColors.systemBackground,
+                          borderRadius: BorderRadius.circular(6),
+                          border:
+                              Border.all(color: CupertinoColors.systemGrey4),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                GeminiModel.getModelById(selectedModelId)
+                                        ?.displayName ??
+                                    'Unknown',
+                                style: const TextStyle(fontSize: 14),
+                              ),
+                            ),
+                            const Icon(
+                              CupertinoIcons.chevron_down,
+                              size: 16,
+                              color: CupertinoColors.systemGrey,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            CupertinoDialogAction(
+              child: const Text('Cancel'),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            CupertinoDialogAction(
+              child: const Text('Save'),
+              onPressed: () async {
+                await _updateApiKey(
+                  index,
+                  nickname: nicknameController.text.trim().isEmpty
+                      ? null
+                      : nicknameController.text.trim(),
+                  modelId: selectedModelId,
+                );
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _updateApiKey(int index,
+      {String? nickname, String? modelId}) async {
+    final apiKeyBox = Hive.box<ApiKeyEntry>('apiKeys');
+    final apiKey = apiKeyBox.getAt(index);
+    if (apiKey != null) {
+      if (nickname != null) apiKey.nickname = nickname;
+      if (modelId != null) apiKey.modelId = modelId;
+      await apiKey.save();
+      _showSnackbar('API key updated successfully!',
+          color: CupertinoColors.activeGreen);
+    }
+  }
+
+  Future<void> _testApiKey(String key, {String? modelId}) async {
     try {
-      // Get the selected model from settings
-      final settings = Hive.box('settings');
-      final selectedModelId = settings.get('selectedModelId', defaultValue: GeminiModel.defaultModel.id);
-      final selectedModel = GeminiModel.getModelById(selectedModelId) ?? GeminiModel.defaultModel;
-      
+      // Use the provided model ID or fallback to default model
+      final selectedModel =
+          GeminiModel.getModelById(modelId ?? GeminiModel.defaultModel.id) ??
+              GeminiModel.defaultModel;
+
       final response = await http
           .post(
             Uri.parse(selectedModel.generateApiUrl(key)),
@@ -412,8 +703,9 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen> {
                       final isPendingDelete = _pendingDeleteIdx == index;
 
                       return Container(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
                         margin: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 4),
+                            horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
                           color: isSelected
                               ? CupertinoColors.activeBlue.withOpacity(0.1)
@@ -428,7 +720,7 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen> {
                         ),
                         child: CupertinoListTile(
                           leading: Container(
-                            padding: const EdgeInsets.all(8),
+                            padding: const EdgeInsets.all(3),
                             decoration: BoxDecoration(
                               color: isSelected
                                   ? CupertinoColors.activeBlue.withOpacity(0.2)
@@ -444,7 +736,9 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen> {
                             ),
                           ),
                           title: Text(
-                            'API Key ${index + 1}',
+                            apiKey.nickname?.isNotEmpty == true
+                                ? apiKey.nickname!
+                                : 'API Key ${index + 1}',
                             style: TextStyle(
                               fontWeight: isSelected
                                   ? FontWeight.w600
@@ -454,17 +748,55 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen> {
                                   : null,
                             ),
                           ),
-                          subtitle: Text(
-                            _showKeys ? apiKey.key : '•' * 32,
-                            style: const TextStyle(
-                              fontFamily: 'SF Mono',
-                              fontSize: 12,
-                              color: CupertinoColors.systemGrey,
-                            ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _showKeys ? apiKey.key : '•' * 32,
+                                style: const TextStyle(
+                                  fontFamily: 'SF Mono',
+                                  fontSize: 12,
+                                  color: CupertinoColors.systemGrey,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  const Icon(
+                                    CupertinoIcons.sparkles,
+                                    size: 12,
+                                    color: CupertinoColors.systemBlue,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      apiKey.model.displayName,
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: CupertinoColors.systemBlue,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
+                              // Model change button
+                              CupertinoButton(
+                                padding: const EdgeInsets.all(8),
+                                child: const Icon(
+                                  CupertinoIcons.settings,
+                                  color: CupertinoColors.systemBlue,
+                                  size: 20,
+                                ),
+                                onPressed: () =>
+                                    _showEditApiKeyDialog(index, apiKey),
+                              ),
+
                               // Test button
                               CupertinoButton(
                                 padding: const EdgeInsets.all(8),
@@ -473,7 +805,8 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen> {
                                   color: CupertinoColors.activeGreen,
                                   size: 20,
                                 ),
-                                onPressed: () => _testApiKey(apiKey.key),
+                                onPressed: () => _testApiKey(apiKey.key,
+                                    modelId: apiKey.modelId),
                               ),
 
                               // Select button

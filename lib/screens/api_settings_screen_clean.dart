@@ -144,9 +144,11 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen> {
     try {
       // Get the selected model from settings
       final settings = Hive.box('settings');
-      final selectedModelId = settings.get('selectedModelId', defaultValue: GeminiModel.defaultModel.id);
-      final selectedModel = GeminiModel.getModelById(selectedModelId) ?? GeminiModel.defaultModel;
-      
+      final selectedModelId = settings.get('selectedModelId',
+          defaultValue: GeminiModel.defaultModel.id);
+      final selectedModel =
+          GeminiModel.getModelById(selectedModelId) ?? GeminiModel.defaultModel;
+
       final response = await http
           .post(
             Uri.parse(selectedModel.generateApiUrl(key)),
