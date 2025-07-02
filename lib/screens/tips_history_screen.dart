@@ -5,8 +5,8 @@ import 'package:hive/hive.dart'; // Local database functionality
 import 'package:hive_flutter/hive_flutter.dart'; // Flutter-specific Hive features
 import '../models/tip_entry.dart'; // Our custom tip data model
 import '../widgets/scrolling_title.dart'; // Custom scrolling title widget
+import '../widgets/tip_card.dart' as tip_widgets; // Import FullTipView widget
 import '../utils/tip_utils.dart'; // Utility functions for tips
-// import './tip_view_screen.dart'; // Import the tip view screen
 
 // Define a StatefulWidget because we need to manage state (search, favorites)
 // StatefulWidget allows the UI to change and update dynamically
@@ -198,6 +198,69 @@ class _TipsHistoryScreenState extends State<TipsHistoryScreen> {
       // Check if search query matches title or content
       return title.contains(_searchQuery) || content.contains(_searchQuery);
     }).toList();
+  }
+
+  // Function to navigate to full tip view
+  void _navigateToTipPreview(TipEntry tipEntry, String tipTitle) {
+    Navigator.of(context).push(
+      CupertinoPageRoute(
+        builder: (context) => tip_widgets.FullTipView(
+          topic: tipTitle,
+          text: tipEntry.tip,
+          date: tipEntry.createdAt.toLocal().toString().split(" ")[0],
+          references: tipEntry.references,
+          isFavorite: tipEntry.isFavorite,
+          onFavorite: () {
+            // Toggle favorite status
+            tipEntry.isFavorite = !tipEntry.isFavorite;
+            tipEntry.save();
+            // Update local favorites set
+            final tipsBox = Hive.box<TipEntry>('tips');
+            final allTips = tipsBox.values.toList();
+            final originalIndex = allTips.indexOf(tipEntry);
+            if (originalIndex != -1) {
+              setState(() {
+                if (tipEntry.isFavorite) {
+                  _favorites.add(originalIndex);
+                } else {
+                  _favorites.remove(originalIndex);
+                }
+              });
+            }
+          },
+          onDelete: () async {
+            await tipEntry.delete();
+            // Remove from favorites set if it was favorited
+            final tipsBox = Hive.box<TipEntry>('tips');
+            final allTips = tipsBox.values.toList();
+            final originalIndex = allTips.indexOf(tipEntry);
+            if (originalIndex != -1) {
+              _favorites.remove(originalIndex);
+            }
+            // The UI will automatically update due to ValueListenableBuilder
+          },
+          onCopy: () => _copyTipToClipboard(tipEntry.tip),
+        ),
+      ),
+    );
+  }
+
+  // Function to copy tip content to clipboard
+  void _copyTipToClipboard(String text) {
+    Clipboard.setData(ClipboardData(text: text));
+    // Show confirmation dialog
+    showCupertinoDialog(
+      context: context,
+      builder: (context) => CupertinoAlertDialog(
+        content: const Text('Tip copied to clipboard!'),
+        actions: [
+          CupertinoDialogAction(
+            child: const Text('OK'),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -392,18 +455,14 @@ class _TipsHistoryScreenState extends State<TipsHistoryScreen> {
                             child: GestureDetector(
                               onTap: () {
                                 // Navigate to TipViewScreen on tap
-                                // Navigator.push(
-                                //   context,
-                                //   CupertinoPageRoute(
-                                //     builder: (context) => TipViewScreen(tip: tip),
-                                //   ),
-                                // );
+                                HapticFeedback.lightImpact();
+                                _navigateToTipPreview(tip, tipTitle);
                               },
                               child: Container(
                                 // Margin between cards
                                 margin: const EdgeInsets.only(bottom: 12),
-                                padding:
-                                    const EdgeInsets.all(16), // Internal padding
+                                padding: const EdgeInsets.all(
+                                    16), // Internal padding
 
                                 // Card styling
                                 decoration: BoxDecoration(
@@ -415,8 +474,8 @@ class _TipsHistoryScreenState extends State<TipsHistoryScreen> {
                                   // Subtle shadow for depth
                                   boxShadow: [
                                     BoxShadow(
-                                      color:
-                                          CupertinoColors.black.withOpacity(0.05),
+                                      color: CupertinoColors.black
+                                          .withOpacity(0.05),
                                       blurRadius: 4,
                                       offset: const Offset(0, 2),
                                     ),
@@ -425,203 +484,211 @@ class _TipsHistoryScreenState extends State<TipsHistoryScreen> {
 
                                 // Card content
                                 child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start, // Align left
-                                  children: [
-                                    // Title and favorite button row
-                                    Row(
-                                      children: [
-                                        // Tip title (expandable)
-                                        Expanded(
-                                          child: Text(
-                                            tipTitle, // Use extracted title
-                                            style: const TextStyle(
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.w600,
-                                              color: CupertinoColors.label,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start, // Align left
+                                    children: [
+                                      // Title and favorite button row
+                                      Row(
+                                        children: [
+                                          // Tip title (expandable)
+                                          Expanded(
+                                            child: Text(
+                                              tipTitle, // Use extracted title
+                                              style: const TextStyle(
+                                                fontSize: 18,
+                                                fontWeight: FontWeight.w600,
+                                                color: CupertinoColors.label,
+                                              ),
+                                              maxLines:
+                                                  2, // Allow up to 2 lines
+                                              overflow: TextOverflow
+                                                  .ellipsis, // Add ... if too long
                                             ),
-                                            maxLines: 2, // Allow up to 2 lines
-                                            overflow: TextOverflow
-                                                .ellipsis, // Add ... if too long
                                           ),
-                                        ),
 
-                                        // Favorite button
-                                        CupertinoButton(
-                                          padding:
-                                              EdgeInsets.zero, // No extra padding
-                                          minSize:
-                                              32, // Minimum touch target size
-                                          child: Icon(
-                                            // Show filled or empty heart based on favorite status
-                                            isFavorite
-                                                ? CupertinoIcons.heart_fill
-                                                : CupertinoIcons.heart,
-                                            color: isFavorite
-                                                ? CupertinoColors.systemRed
-                                                : CupertinoColors.systemGrey,
+                                          // Favorite button
+                                          CupertinoButton(
+                                            padding: EdgeInsets
+                                                .zero, // No extra padding
+                                            minSize:
+                                                32, // Minimum touch target size
+                                            child: Icon(
+                                              // Show filled or empty heart based on favorite status
+                                              isFavorite
+                                                  ? CupertinoIcons.heart_fill
+                                                  : CupertinoIcons.heart,
+                                              color: isFavorite
+                                                  ? CupertinoColors.systemRed
+                                                  : CupertinoColors.systemGrey,
+                                            ),
+                                            // Toggle favorite when pressed
+                                            onPressed: () => _toggleFavorite(
+                                                originalIndex, tip),
                                           ),
-                                          // Toggle favorite when pressed
-                                          onPressed: () =>
-                                              _toggleFavorite(originalIndex, tip),
-                                        ),
-                                      ],
-                                    ),
-
-                                    const SizedBox(height: 8), // Spacing
-
-                                    // Tip preview text
-                                    Text(
-                                      _getPreviewText(tip.tip),
-                                      style: const TextStyle(
-                                        fontSize: 15,
-                                        color: CupertinoColors.systemGrey,
-                                        height:
-                                            1.4, // Line height for readability
+                                        ],
                                       ),
-                                      maxLines:
-                                          3, // Show up to 3 lines of preview
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
 
-                                    const SizedBox(height: 8), // Spacing
+                                      const SizedBox(height: 8), // Spacing
 
-                                    // Metadata row (date, reading time, difficulty)
-                                    Row(
-                                      children: [
-                                        // Creation date
-                                        Text(
-                                          tip.createdAt
-                                              .toLocal()
-                                              .toString()
-                                              .split(
-                                                  ' ')[0], // Just the date part
-                                          style: const TextStyle(
-                                            fontSize: 13,
-                                            color: CupertinoColors.systemGrey2,
-                                          ),
+                                      // Tip preview text
+                                      Text(
+                                        _getPreviewText(tip.tip),
+                                        style: const TextStyle(
+                                          fontSize: 15,
+                                          color: CupertinoColors.systemGrey,
+                                          height:
+                                              1.4, // Line height for readability
                                         ),
+                                        maxLines:
+                                            3, // Show up to 3 lines of preview
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+
+                                      const SizedBox(height: 8), // Spacing
+
+                                      // Metadata row (date, reading time, difficulty)
+                                      Row(
+                                        children: [
+                                          // Creation date
+                                          Text(
+                                            tip.createdAt
+                                                    .toLocal()
+                                                    .toString()
+                                                    .split(' ')[
+                                                0], // Just the date part
+                                            style: const TextStyle(
+                                              fontSize: 13,
+                                              color:
+                                                  CupertinoColors.systemGrey2,
+                                            ),
+                                          ),
+
+                                          const Text(
+                                            ' • ', // Separator
+                                            style: TextStyle(
+                                              color:
+                                                  CupertinoColors.systemGrey2,
+                                            ),
+                                          ),
+
+                                          // Tip metadata (reading time, difficulty, etc.)
+                                          Text(
+                                            TipUtils.formatTipMetadata(tip.tip),
+                                            style: const TextStyle(
+                                              fontSize: 13,
+                                              color:
+                                                  CupertinoColors.systemGrey2,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+
+                                      // Show references if they exist
+                                      if (tip.references != null &&
+                                          tip.references!.isNotEmpty) ...[
+                                        const SizedBox(
+                                            height:
+                                                12), // Extra spacing before references
 
                                         const Text(
-                                          ' • ', // Separator
+                                          'References:',
                                           style: TextStyle(
-                                            color: CupertinoColors.systemGrey2,
+                                            fontWeight: FontWeight.w500,
+                                            fontSize: 14,
+                                            color: CupertinoColors.label,
                                           ),
                                         ),
 
-                                        // Tip metadata (reading time, difficulty, etc.)
-                                        Text(
-                                          TipUtils.formatTipMetadata(tip.tip),
-                                          style: const TextStyle(
-                                            fontSize: 13,
-                                            color: CupertinoColors.systemGrey2,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
+                                        const SizedBox(height: 4),
 
-                                    // Show references if they exist
-                                    if (tip.references != null &&
-                                        tip.references!.isNotEmpty) ...[
-                                      const SizedBox(
-                                          height:
-                                              12), // Extra spacing before references
-
-                                      const Text(
-                                        'References:',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w500,
-                                          fontSize: 14,
-                                          color: CupertinoColors.label,
-                                        ),
-                                      ),
-
-                                      const SizedBox(height: 4),
-
-                                      // Loop through and display each reference
-                                      ...tip.references!.take(3).map((ref) =>
-                                          Padding(
-                                            padding:
-                                                const EdgeInsets.only(top: 2),
-                                            child: GestureDetector(
-                                              // Make references tappable
-                                              onTap: () {
-                                                // Show reference in dialog
-                                                showCupertinoDialog(
-                                                  context: context,
-                                                  builder: (_) =>
-                                                      CupertinoAlertDialog(
-                                                    title:
-                                                        const Text('Reference'),
-                                                    content: Text(ref),
-                                                    actions: [
-                                                      CupertinoDialogAction(
-                                                        child: const Text('Copy'),
-                                                        onPressed: () {
-                                                          Navigator.pop(context);
-                                                          // Copy reference to clipboard
-                                                          Clipboard.setData(
-                                                              ClipboardData(
-                                                                  text: ref));
-                                                          // Haptic feedback for copy action
-                                                          HapticFeedback
-                                                              .lightImpact();
-                                                        },
-                                                      ),
-                                                      CupertinoDialogAction(
-                                                        child:
-                                                            const Text('Close'),
-                                                        onPressed: () =>
+                                        // Loop through and display each reference
+                                        ...tip.references!.take(3).map((ref) =>
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.only(top: 2),
+                                              child: GestureDetector(
+                                                // Make references tappable
+                                                onTap: () {
+                                                  // Show reference in dialog
+                                                  showCupertinoDialog(
+                                                    context: context,
+                                                    builder: (_) =>
+                                                        CupertinoAlertDialog(
+                                                      title: const Text(
+                                                          'Reference'),
+                                                      content: Text(ref),
+                                                      actions: [
+                                                        CupertinoDialogAction(
+                                                          child: const Text(
+                                                              'Copy'),
+                                                          onPressed: () {
                                                             Navigator.pop(
-                                                                context),
-                                                      ),
-                                                    ],
+                                                                context);
+                                                            // Copy reference to clipboard
+                                                            Clipboard.setData(
+                                                                ClipboardData(
+                                                                    text: ref));
+                                                            // Haptic feedback for copy action
+                                                            HapticFeedback
+                                                                .lightImpact();
+                                                          },
+                                                        ),
+                                                        CupertinoDialogAction(
+                                                          child: const Text(
+                                                              'Close'),
+                                                          onPressed: () =>
+                                                              Navigator.pop(
+                                                                  context),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  );
+                                                },
+                                                child: Text(
+                                                  ref.length > 50
+                                                      ? '${ref.substring(0, 50)}...'
+                                                      : ref,
+                                                  style: const TextStyle(
+                                                    color: CupertinoColors
+                                                        .activeBlue,
+                                                    decoration: TextDecoration
+                                                        .underline,
+                                                    fontSize: 13,
                                                   ),
-                                                );
-                                              },
-                                              child: Text(
-                                                ref.length > 50
-                                                    ? '${ref.substring(0, 50)}...'
-                                                    : ref,
-                                                style: const TextStyle(
-                                                  color:
-                                                      CupertinoColors.activeBlue,
-                                                  decoration:
-                                                      TextDecoration.underline,
-                                                  fontSize: 13,
                                                 ),
                                               ),
-                                            ),
-                                          )),
+                                            )),
 
-                                      // Show "and X more" if there are more than 3 references
-                                      if (tip.references!.length > 3)
-                                        Padding(
-                                          padding: const EdgeInsets.only(top: 4),
-                                          child: Text(
-                                            'and ${tip.references!.length - 3} more...',
-                                            style: const TextStyle(
-                                              fontSize: 12,
-                                              color: CupertinoColors.systemGrey,
-                                              fontStyle: FontStyle.italic,
+                                        // Show "and X more" if there are more than 3 references
+                                        if (tip.references!.length > 3)
+                                          Padding(
+                                            padding:
+                                                const EdgeInsets.only(top: 4),
+                                            child: Text(
+                                              'and ${tip.references!.length - 3} more...',
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                                color:
+                                                    CupertinoColors.systemGrey,
+                                                fontStyle: FontStyle.italic,
+                                              ),
                                             ),
                                           ),
-                                        ),
-                                    ],
-                                  ]),
-                                ),
+                                      ],
+                                    ]),
                               ),
-                            );
-                          },
-                        ),
+                            ),
+                          );
+                        },
                       ),
-                    ],
-                  );
-                },
-              ),
+                    ),
+                  ],
+                );
+              },
             ),
-          );
-        },
-      );
-    }
+          ),
+        );
+      },
+    );
+  }
 }
