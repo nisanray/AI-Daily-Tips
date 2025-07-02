@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
 import '../models/api_key_entry.dart';
 import 'dart:convert';
 import 'dart:io';
@@ -220,6 +221,56 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen> {
     }
   }
 
+  // Method to show API guide and launch URL
+  void _showApiGuide() {
+    showCupertinoDialog(
+      context: context,
+      builder: (context) => CupertinoAlertDialog(
+        title: const Text(
+          'Get Gemini API Key',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
+        content: const Text(
+          'Follow these steps to get your free Gemini API key:\n\n'
+          '1. Visit ai.google.dev\n'
+          '2. Sign in with your Google account\n'
+          '3. Click "Get API Key"\n'
+          '4. Create a new API key\n'
+          '5. Copy and paste it here\n\n'
+          'Would you like to open the website now?',
+          style: TextStyle(fontSize: 15, height: 1.4),
+        ),
+        actions: [
+          CupertinoDialogAction(
+            child: const Text('Cancel'),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          CupertinoDialogAction(
+            isDefaultAction: true,
+            child: const Text('Open Website'),
+            onPressed: () async {
+              Navigator.of(context).pop();
+              try {
+                final url = Uri.parse('https://ai.google.dev/');
+                if (await canLaunchUrl(url)) {
+                  await launchUrl(url, mode: LaunchMode.externalApplication);
+                } else {
+                  _showSnackbar(
+                      'Could not open website. Please visit ai.google.dev manually.',
+                      color: CupertinoColors.systemOrange);
+                }
+              } catch (e) {
+                _showSnackbar(
+                    'Could not open website. Please visit ai.google.dev manually.',
+                    color: CupertinoColors.systemOrange);
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final apiKeyBox = Hive.box<ApiKeyEntry>('apiKeys');
@@ -227,10 +278,22 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen> {
     return CupertinoPageScaffold(
       navigationBar: CupertinoNavigationBar(
         middle: const Text('API Key Settings'),
-        trailing: CupertinoButton(
-          padding: EdgeInsets.zero,
-          child: const Icon(CupertinoIcons.add),
-          onPressed: _showAddApiKeyDialog,
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Get API button
+            CupertinoButton(
+              padding: EdgeInsets.zero,
+              child: const Icon(CupertinoIcons.info_circle),
+              onPressed: _showApiGuide,
+            ),
+            // Add API button
+            CupertinoButton(
+              padding: EdgeInsets.zero,
+              child: const Icon(CupertinoIcons.add),
+              onPressed: _showAddApiKeyDialog,
+            ),
+          ],
         ),
       ),
       child: SafeArea(
@@ -270,9 +333,34 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen> {
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 24),
-                    CupertinoButton.filled(
-                      child: const Text('Add API Key'),
-                      onPressed: _showAddApiKeyDialog,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        CupertinoButton(
+                          color: CupertinoColors.activeBlue.withOpacity(0.1),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 20, vertical: 12),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: const [
+                              Icon(CupertinoIcons.info_circle,
+                                  color: CupertinoColors.activeBlue, size: 18),
+                              SizedBox(width: 8),
+                              Text(
+                                'Get API Key',
+                                style: TextStyle(
+                                    color: CupertinoColors.activeBlue),
+                              ),
+                            ],
+                          ),
+                          onPressed: _showApiGuide,
+                        ),
+                        const SizedBox(width: 12),
+                        CupertinoButton.filled(
+                          child: const Text('Add API Key'),
+                          onPressed: _showAddApiKeyDialog,
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -423,37 +511,6 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen> {
                         ),
                       );
                     },
-                  ),
-                ),
-
-                // Help section
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'How to get a Gemini API Key:',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: CupertinoColors.label,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        '1. Visit ai.google.dev\n'
-                        '2. Sign in with your Google account\n'
-                        '3. Go to "Get API Key"\n'
-                        '4. Create a new API key\n'
-                        '5. Copy and paste it here',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: CupertinoColors.secondaryLabel,
-                          height: 1.4,
-                        ),
-                      ),
-                    ],
                   ),
                 ),
               ],
