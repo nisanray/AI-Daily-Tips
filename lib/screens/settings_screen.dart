@@ -85,37 +85,44 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     children: [
                       Row(
                         children: [
-                          Text(
-                            model.displayName,
-                            style: TextStyle(
-                              fontWeight: _selectedModelId == model.id 
-                                  ? FontWeight.w600 
-                                  : FontWeight.normal,
-                              color: _selectedModelId == model.id 
-                                  ? CupertinoColors.activeBlue 
-                                  : null,
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  model.displayName,
+                                  style: TextStyle(
+                                    fontWeight: _selectedModelId == model.id 
+                                        ? FontWeight.w600 
+                                        : FontWeight.normal,
+                                    color: _selectedModelId == model.id 
+                                        ? CupertinoColors.activeBlue 
+                                        : null,
+                                  ),
+                                ),
+                                if (model.isRecommended) ...[
+                                  const SizedBox(height: 4),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: CupertinoColors.activeGreen.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: const Text(
+                                      'RECOMMENDED',
+                                      style: TextStyle(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w600,
+                                        color: CupertinoColors.activeGreen,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
                           ),
-                          if (model.isRecommended) ...[
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: CupertinoColors.activeGreen.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: const Text(
-                                'RECOMMENDED',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
-                                  color: CupertinoColors.activeGreen,
-                                ),
-                              ),
-                            ),
-                          ],
                           if (_selectedModelId == model.id) ...[
-                            const Spacer(),
+                            const SizedBox(width: 8),
                             const Icon(
                               CupertinoIcons.checkmark_circle_fill,
                               color: CupertinoColors.activeBlue,
