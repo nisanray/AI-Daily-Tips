@@ -951,10 +951,11 @@ Future<String> fetchGeminiTip(String apiKey, String prompt) async {
     // Get the selected API key and its associated model
     final settings = Hive.box('settings');
     final apiKeyBox = Hive.box<ApiKeyEntry>('apiKeys');
-    final selectedApiKeyIndex = settings.get('selectedApiKeyIndex', defaultValue: 0);
-    
+    final selectedApiKeyIndex =
+        settings.get('selectedApiKeyIndex', defaultValue: 0);
+
     GeminiModel selectedModel = GeminiModel.defaultModel;
-    
+
     // Try to get the model from the selected API key
     if (selectedApiKeyIndex < apiKeyBox.length) {
       final selectedApiKey = apiKeyBox.getAt(selectedApiKeyIndex);
@@ -962,7 +963,7 @@ Future<String> fetchGeminiTip(String apiKey, String prompt) async {
         selectedModel = selectedApiKey.model;
       }
     }
-    
+
     final url = Uri.parse(selectedModel.generateApiUrl(apiKey));
     final body = jsonEncode({
       'contents': [

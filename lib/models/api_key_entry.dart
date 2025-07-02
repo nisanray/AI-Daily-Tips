@@ -28,17 +28,18 @@ class ApiKeyEntry extends HiveObject {
   String modelId;
 
   ApiKeyEntry({
-    required this.key, 
-    DateTime? addedAt, 
+    required this.key,
+    DateTime? addedAt,
     this.nickname,
     String? modelId,
-  }) : addedAt = addedAt ?? DateTime.now(),
-       modelId = modelId ?? GeminiModel.defaultModel.id;
+  })  : addedAt = addedAt ?? DateTime.now(),
+        modelId = modelId ?? GeminiModel.defaultModel.id;
 
   @override
   String toString() =>
       'ApiKeyEntry(key: $key, nickname: $nickname, addedAt: $addedAt, modelId: $modelId)';
-      
+
   /// Get the associated Gemini model
-  GeminiModel get model => GeminiModel.getModelById(modelId) ?? GeminiModel.defaultModel;
+  GeminiModel get model =>
+      GeminiModel.getModelById(modelId) ?? GeminiModel.defaultModel;
 }

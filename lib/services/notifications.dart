@@ -252,10 +252,11 @@ Future<String> _generateTipForTopic(String topic, String apiKey) async {
   // Get the selected API key and its associated model
   final settings = Hive.box('settings');
   final apiKeyBox = Hive.box<ApiKeyEntry>('apiKeys');
-  final selectedApiKeyIndex = settings.get('selectedApiKeyIndex', defaultValue: 0);
-  
+  final selectedApiKeyIndex =
+      settings.get('selectedApiKeyIndex', defaultValue: 0);
+
   GeminiModel selectedModel = GeminiModel.defaultModel;
-  
+
   // Try to get the model from the selected API key
   if (selectedApiKeyIndex < apiKeyBox.length) {
     final selectedApiKey = apiKeyBox.getAt(selectedApiKeyIndex);

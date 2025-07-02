@@ -837,8 +837,8 @@ class FullTipView extends StatelessWidget {
                             title: const Text(
                               'Delete Tip',
                               style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  color: CupertinoColors.white),
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                             content: const Text(
                               'Are you sure you want to delete this tip? This action cannot be undone.',
@@ -883,9 +883,9 @@ class FullTipView extends StatelessWidget {
                           Text(
                             'Delete Tip',
                             style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 16,
-                            ),
+                                fontWeight: FontWeight.w600,
+                                fontSize: 16,
+                                color: CupertinoColors.white),
                           ),
                         ],
                       ),
