@@ -714,7 +714,6 @@ CRITICAL REQUIREMENTS:
           },
           onDelete: () async {
             await tipEntry.delete();
-            Navigator.of(context).pop(); // Go back after deletion
             // Remove from local list when we return to the main screen
             Future.delayed(Duration.zero, () {
               setState(() {

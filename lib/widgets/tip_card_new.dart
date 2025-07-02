@@ -858,9 +858,11 @@ class FullTipView extends StatelessWidget {
                                 ),
                                 onPressed: () async {
                                   HapticFeedback.heavyImpact();
-                                  Navigator.of(context).pop();
-                                  Navigator.of(context).pop();
-                                  await onDelete!();
+                                  Navigator.of(context).pop(); // Close dialog
+                                  Navigator.of(context).pop(); // Close tip view
+                                  if (onDelete != null) {
+                                    await onDelete!();
+                                  }
                                 },
                               ),
                             ],

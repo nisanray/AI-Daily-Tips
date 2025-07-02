@@ -836,7 +836,9 @@ class FullTipView extends StatelessWidget {
                           builder: (context) => CupertinoAlertDialog(
                             title: const Text(
                               'Delete Tip',
-                              style: TextStyle(fontWeight: FontWeight.w600,color: CupertinoColors.white),
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: CupertinoColors.white),
                             ),
                             content: const Text(
                               'Are you sure you want to delete this tip? This action cannot be undone.',
@@ -858,9 +860,11 @@ class FullTipView extends StatelessWidget {
                                 ),
                                 onPressed: () async {
                                   HapticFeedback.heavyImpact();
-                                  Navigator.of(context).pop();
-                                  Navigator.of(context).pop();
-                                  await onDelete!();
+                                  Navigator.of(context).pop(); // Close dialog
+                                  Navigator.of(context).pop(); // Close tip view
+                                  if (onDelete != null) {
+                                    await onDelete!();
+                                  }
                                 },
                               ),
                             ],
