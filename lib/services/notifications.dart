@@ -6,6 +6,7 @@ import '../models/tip_entry.dart';
 import '../models/notification_schedule_entry.dart';
 import '../models/topic_entry.dart';
 import '../models/api_key_entry.dart';
+import '../models/gemini_model.dart';
 import 'dart:convert';
 import 'dart:math';
 import 'package:http/http.dart' as http;
@@ -248,8 +249,12 @@ Future<void> scheduleSmartTipNotification() async {
 }
 
 Future<String> _generateTipForTopic(String topic, String apiKey) async {
-  final url = Uri.parse(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=$apiKey');
+  // Get the selected model from settings
+  final settings = Hive.box('settings');
+  final selectedModelId = settings.get('selectedModelId', defaultValue: GeminiModel.defaultModel.id);
+  final selectedModel = GeminiModel.getModelById(selectedModelId) ?? GeminiModel.defaultModel;
+  
+  final url = Uri.parse(selectedModel.generateApiUrl(apiKey));
   final body = jsonEncode({
     'contents': [
       {

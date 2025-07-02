@@ -5,6 +5,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import '../models/api_key_entry.dart';
 import '../models/topic_entry.dart';
 import '../models/tip_entry.dart';
+import '../models/gemini_model.dart';
 import '../widgets/cupertino_topic_chip.dart';
 import '../widgets/tip_card.dart';
 import '../widgets/shimmer_tip_list.dart';
@@ -947,8 +948,12 @@ CRITICAL REQUIREMENTS:
 
 Future<String> fetchGeminiTip(String apiKey, String prompt) async {
   try {
-    final url = Uri.parse(
-        'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=$apiKey');
+    // Get the selected model from settings
+    final settings = Hive.box('settings');
+    final selectedModelId = settings.get('selectedModelId', defaultValue: GeminiModel.defaultModel.id);
+    final selectedModel = GeminiModel.getModelById(selectedModelId) ?? GeminiModel.defaultModel;
+    
+    final url = Uri.parse(selectedModel.generateApiUrl(apiKey));
     final body = jsonEncode({
       'contents': [
         {
@@ -957,12 +962,12 @@ Future<String> fetchGeminiTip(String apiKey, String prompt) async {
           ]
         }
       ],
-      // Add configuration for better responses
+      // Add configuration for better responses, adjusted for selected model
       'generationConfig': {
         'temperature': 0.7,
         'topK': 40,
         'topP': 0.95,
-        'maxOutputTokens': 8192,
+        'maxOutputTokens': selectedModel.maxTokens > 8192 ? 8192 : selectedModel.maxTokens,
       },
       'safetySettings': [
         {

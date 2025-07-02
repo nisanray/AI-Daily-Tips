@@ -6,6 +6,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 import '../models/api_key_entry.dart';
+import '../models/gemini_model.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:async';
@@ -141,10 +142,14 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen> {
 
   Future<void> _testApiKey(String key) async {
     try {
+      // Get the selected model from settings
+      final settings = Hive.box('settings');
+      final selectedModelId = settings.get('selectedModelId', defaultValue: GeminiModel.defaultModel.id);
+      final selectedModel = GeminiModel.getModelById(selectedModelId) ?? GeminiModel.defaultModel;
+      
       final response = await http
           .post(
-            Uri.parse(
-                'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=$key'),
+            Uri.parse(selectedModel.generateApiUrl(key)),
             headers: {
               'Content-Type': 'application/json',
               'User-Agent': 'Daily Tips App/1.0',
