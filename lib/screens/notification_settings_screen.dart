@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import '../models/notification_schedule_entry.dart';
 import '../services/notifications.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class NotificationSettingsScreen extends StatefulWidget {
   const NotificationSettingsScreen({super.key});
@@ -15,6 +16,7 @@ class _NotificationSettingsScreenState
     extends State<NotificationSettingsScreen> {
   bool _pauseAll = false;
   DateTime? _snoozeUntil;
+  bool _randomNotificationsEnabled = false;
 
   @override
   void initState() {
@@ -22,6 +24,40 @@ class _NotificationSettingsScreenState
     final settings = Hive.box('settings');
     _pauseAll = settings.get('pauseAllNotifications', defaultValue: false);
     _snoozeUntil = settings.get('snoozeUntil');
+    _randomNotificationsEnabled =
+        settings.get('randomNotificationsEnabled', defaultValue: false);
+    _checkAndShowNotificationPermissionDialog();
+  }
+
+  void _checkAndShowNotificationPermissionDialog() async {
+    final status = await Permission.notification.status;
+    if (!status.isGranted) {
+      // Wait for build context
+      await Future.delayed(const Duration(milliseconds: 300));
+      if (!mounted) return;
+      showCupertinoDialog(
+        context: context,
+        builder: (context) => CupertinoAlertDialog(
+          title: const Text('Enable Notifications'),
+          content: const Text(
+              'For the best experience, please allow notifications so you never miss your daily tips.'),
+          actions: [
+            CupertinoDialogAction(
+              child: const Text('Maybe Later'),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            CupertinoDialogAction(
+              isDefaultAction: true,
+              child: const Text('Allow'),
+              onPressed: () async {
+                Navigator.of(context).pop();
+                await Permission.notification.request();
+              },
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   void _togglePauseAll(bool value) async {
@@ -34,6 +70,17 @@ class _NotificationSettingsScreenState
     final settings = Hive.box('settings');
     setState(() => _snoozeUntil = until);
     await settings.put('snoozeUntil', until);
+  }
+
+  void _toggleRandomNotifications(bool value) async {
+    final settings = Hive.box('settings');
+    setState(() => _randomNotificationsEnabled = value);
+    await settings.put('randomNotificationsEnabled', value);
+    if (value) {
+      await enableRandomNotifications();
+    } else {
+      await disableRandomNotifications();
+    }
   }
 
   void _showAddOrEditSchedule({NotificationScheduleEntry? entry, int? idx}) {
@@ -1274,127 +1321,183 @@ class _NotificationSettingsScreenState
           onPressed: () => _showAddOrEditSchedule(),
         ),
       ),
-      child: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            const SliverToBoxAdapter(child: SizedBox(height: 16)),
-
-            // Quick Actions Card
-            SliverToBoxAdapter(child: _buildQuickActionsCard()),
-
-            // Schedules Header
-            SliverToBoxAdapter(
-              child: Container(
-                margin:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: CupertinoColors.systemBlue.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(
-                        CupertinoIcons.clock,
-                        color: CupertinoColors.systemBlue,
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    const Text(
-                      'Notification Schedules',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: CupertinoColors.label,
-                      ),
-                    ),
-                    const Spacer(),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: CupertinoColors.systemFill,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Text(
-                        '${schedules.length}',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: CupertinoColors.secondaryLabel,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // Schedules List
-            if (schedules.isEmpty)
-              SliverToBoxAdapter(
-                child: Container(
-                  margin: const EdgeInsets.all(24),
-                  padding: const EdgeInsets.all(32),
-                  decoration: BoxDecoration(
-                    color: CupertinoColors.systemBackground,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
+      child: Stack(
+        children: [
+          SafeArea(
+            child: CustomScrollView(
+              slivers: [
+                const SliverToBoxAdapter(child: SizedBox(height: 16)),
+                // Random notification toggle
+                SliverToBoxAdapter(
                   child: Column(
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(16),
+                        margin: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
+                        padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: CupertinoColors.systemGrey6,
-                          borderRadius: BorderRadius.circular(32),
+                          color: CupertinoColors.systemBackground,
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(
-                          CupertinoIcons.bell_slash,
-                          size: 32,
-                          color: CupertinoColors.secondaryLabel,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'Enable Random Notifications (every 5 min)',
+                              style: TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.w500),
+                            ),
+                            CupertinoSwitch(
+                              value: _randomNotificationsEnabled,
+                              onChanged: _toggleRandomNotifications,
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'No Schedules Yet',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w600,
-                          color: CupertinoColors.label,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Create your first notification schedule to start receiving AI tips',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: CupertinoColors.secondaryLabel,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 20),
-                      CupertinoButton.filled(
-                        child: const Text('Create Schedule'),
-                        onPressed: () => _showAddOrEditSchedule(),
+                      CupertinoButton(
+                        child: const Text('Enable Notifications'),
+                        onPressed: _checkAndShowNotificationPermissionDialog,
                       ),
                     ],
                   ),
                 ),
-              )
-            else
-              SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) =>
-                      _buildScheduleCard(schedules[index], index),
-                  childCount: schedules.length,
-                ),
-              ),
+                // Quick Actions Card
+                SliverToBoxAdapter(child: _buildQuickActionsCard()),
 
-            const SliverToBoxAdapter(child: SizedBox(height: 100)),
-          ],
-        ),
+                // Schedules Header
+                SliverToBoxAdapter(
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 16),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: CupertinoColors.systemBlue.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(
+                            CupertinoIcons.clock,
+                            color: CupertinoColors.systemBlue,
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        const Text(
+                          'Notification Schedules',
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: CupertinoColors.label,
+                          ),
+                        ),
+                        const Spacer(),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: CupertinoColors.systemFill,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Text(
+                            '${schedules.length}',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: CupertinoColors.secondaryLabel,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Schedules List
+                if (schedules.isEmpty)
+                  SliverToBoxAdapter(
+                    child: Container(
+                      margin: const EdgeInsets.all(24),
+                      padding: const EdgeInsets.all(32),
+                      decoration: BoxDecoration(
+                        color: CupertinoColors.systemBackground,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Column(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: CupertinoColors.systemGrey6,
+                              borderRadius: BorderRadius.circular(32),
+                            ),
+                            child: const Icon(
+                              CupertinoIcons.bell_slash,
+                              size: 32,
+                              color: CupertinoColors.secondaryLabel,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'No Schedules Yet',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w600,
+                              color: CupertinoColors.label,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Create your first notification schedule to start receiving AI tips',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: CupertinoColors.secondaryLabel,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 20),
+                          CupertinoButton.filled(
+                            child: const Text('Create Schedule'),
+                            onPressed: () => _showAddOrEditSchedule(),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else
+                  SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) =>
+                          _buildScheduleCard(schedules[index], index),
+                      childCount: schedules.length,
+                    ),
+                  ),
+
+                const SliverToBoxAdapter(child: SizedBox(height: 100)),
+              ],
+            ),
+          ),
+          // Dedicated test native notification button
+          Positioned(
+            left: 16,
+            right: 16,
+            bottom: 32,
+            child: CupertinoButton.filled(
+              child: const Text('Test Native Notification'),
+              onPressed: () async {
+                final tipId = 'test_native_tip';
+                final notificationId = generateNotificationId(tipId);
+                await showTipNotification(
+                  'This is a test native notification!',
+                  useNative: true,
+                  tipId: tipId,
+                  notificationId: notificationId,
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

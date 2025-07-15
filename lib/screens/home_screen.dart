@@ -18,6 +18,7 @@ import '../services/notifications.dart';
 import 'dart:math';
 import 'dart:io';
 import 'dart:async';
+import 'package:permission_handler/permission_handler.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -36,9 +37,48 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _showNotificationPermissionDialogIfNeeded();
     _loadSelectedIndex();
-    _loadInitialTopics();
+    _loadInitialTopics().then((_) {
+      // Set default selected topic index to 0 if not already set
+      if (_selectedTopicIndex == null) {
+        setState(() {
+          _selectedTopicIndex = 0;
+        });
+      }
+    });
     _loadRecentTips();
+  }
+
+  void _showNotificationPermissionDialogIfNeeded() async {
+    final status = await Permission.notification.status;
+    if (!status.isGranted) {
+      // Wait for build context
+      await Future.delayed(const Duration(milliseconds: 300));
+      if (!mounted) return;
+      showCupertinoDialog(
+        context: context,
+        builder: (context) => CupertinoAlertDialog(
+          title: const Text('Enable Notifications'),
+          content: const Text(
+              'For the best experience, please allow notifications so you never miss your daily tips.'),
+          actions: [
+            CupertinoDialogAction(
+              child: const Text('Maybe Later'),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            CupertinoDialogAction(
+              isDefaultAction: true,
+              child: const Text('Allow'),
+              onPressed: () async {
+                Navigator.of(context).pop();
+                await Permission.notification.request();
+              },
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   Future<void> _loadSelectedIndex() async {
@@ -67,11 +107,23 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadRecentTips() async {
     final tipsBox = Hive.box<TipEntry>('tips');
     final allTips = tipsBox.values.toList();
+    // Filter out test/background tips
+    final filteredTips = allTips.where((tip) {
+      final lower = tip.tip.toLowerCase();
+      return !lower.contains('test native notification') &&
+          !lower.contains('background ai tip');
+    }).toList();
+    // Remove duplicates by tip text
+    final uniqueTips = <String, TipEntry>{};
+    for (final tip in filteredTips) {
+      uniqueTips[tip.tip] = tip;
+    }
+    final tipsList = uniqueTips.values.toList();
     // Sort by creation date, most recent first
-    allTips.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    tipsList.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     setState(() {
       _tips.clear();
-      _tips.addAll(allTips.take(10)); // Show only recent 10 tips
+      _tips.addAll(tipsList.take(10)); // Show only recent 10 tips
     });
   }
 

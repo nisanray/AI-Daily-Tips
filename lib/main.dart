@@ -1,6 +1,7 @@
 import 'dart:io';
 // import 'package:alarm/payment_page.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/widgets.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -12,14 +13,31 @@ import 'models/tip_entry.dart';
 import 'models/notification_schedule_entry.dart';
 import 'screens/home_screen.dart';
 import 'screens/welcome_screen.dart';
+import 'screens/onboarding_screen.dart';
 import 'services/notifications.dart';
 import 'services/tip_generation_service.dart';
+import 'screens/tip_viewer_screen.dart';
+
+class AppLifecycleHandler extends WidgetsBindingObserver {
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Cancel all scheduled and shown notifications when app is resumed
+      cancelAllScheduledNotifications();
+      // Optionally, cancel native notification with a known ID (0 for default)
+      cancelNativeNotification(notificationId: 0);
+    }
+  }
+}
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  WidgetsBinding.instance.addObserver(AppLifecycleHandler());
+  await registerBackgroundTipTask();
 
   // Initialize Hive
   await Hive.initFlutter();
@@ -56,23 +74,53 @@ Future<void> main() async {
     initializationSettings,
     onDidReceiveNotificationResponse: (NotificationResponse response) async {
       // Handle notification tap
-      print('Notification tapped: ${response.payload}');
+      if (response.payload != null && response.payload!.isNotEmpty) {
+        try {
+          final payload = response.payload!;
+          // Try to parse as Map (from toString), fallback to raw string
+          final tipData = _parseNotificationPayload(payload);
+          if (tipData != null) {
+            navigatorKey.currentState?.push(
+              CupertinoPageRoute(
+                builder: (context) => TipViewerScreen(
+                  tip: tipData['tip'] ?? '',
+                  title: tipData['title'] ?? '',
+                  topic: tipData['topic'] ?? '',
+                ),
+              ),
+            );
+          }
+        } catch (e) {
+          print('Failed to parse notification payload: $e');
+        }
+      }
     },
   );
 
   // Request notification permission on Android 13+
-  if (Platform.isAndroid) {
-    final androidInfo = await DeviceInfoPlugin().androidInfo;
-    if (androidInfo.version.sdkInt >= 33) {
-      final status = await Permission.notification.request();
-      if (!status.isGranted) {
-        print('Notification permission not granted.');
-      }
-    }
-  }
+  // (Removed: now handled only in onboarding dialog)
+  // if (Platform.isAndroid) {
+  //   final androidInfo = await DeviceInfoPlugin().androidInfo;
+  //   if (androidInfo.version.sdkInt >= 33) {
+  //     final status = await Permission.notification.request();
+  //     if (!status.isGranted) {
+  //       print('Notification permission not granted.');
+  //     }
+  //   }
+  // }
 
   // Setup initial notification schedules
   await _setupInitialNotifications();
+
+  // Setup native notification callbacks
+  setupNativeNotificationCallbacks(
+    onTipRead: (data) => print('Native: Tip Read: ' + data.toString()),
+    onTipShare: (data) => print('Native: Tip Share: ' + data.toString()),
+    onTipSave: (data) => print('Native: Tip Save: ' + data.toString()),
+    onTipDismiss: (data) => print('Native: Tip Dismiss: ' + data.toString()),
+    onNotificationShown: (data) =>
+        print('Native: Notification Shown: ' + data.toString()),
+  );
 
   runApp(const MyApp());
 }
@@ -110,10 +158,12 @@ class MyApp extends StatelessWidget {
         primaryColor: CupertinoColors.activeBlue,
         brightness: Brightness.light,
       ),
+      navigatorKey: navigatorKey,
       home: _getInitialScreen(),
       routes: {
         '/home': (context) => const HomeScreen(),
         '/welcome': (context) => const WelcomeScreen(),
+        '/tip_viewer': (context) => TipViewerScreen(),
       },
     );
   }
@@ -125,7 +175,27 @@ class MyApp extends StatelessWidget {
     if (hasSeenWelcome) {
       return const HomeScreen();
     } else {
-      return const WelcomeScreen();
+      return const OnboardingScreen();
     }
+  }
+}
+
+Map<String, dynamic>? _parseNotificationPayload(String payload) {
+  // Try to parse a Map from the payload string
+  try {
+    // Remove curly braces and newlines
+    final map = <String, dynamic>{};
+    final cleaned = payload.replaceAll(RegExp(r'[{}\n]'), '');
+    for (final part in cleaned.split(',')) {
+      final kv = part.split(':');
+      if (kv.length >= 2) {
+        final key = kv[0].trim();
+        final value = kv.sublist(1).join(':').trim();
+        map[key] = value;
+      }
+    }
+    return map;
+  } catch (e) {
+    return null;
   }
 }

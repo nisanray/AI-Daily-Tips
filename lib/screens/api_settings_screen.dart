@@ -173,7 +173,7 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen> {
                         : nicknameController.text.trim(),
                     modelId: selectedModelId,
                   );
-                  Navigator.of(context).pop();
+                  Navigator.of(context).pop(); // Ensure modal closes after add
                 }
               },
             ),
