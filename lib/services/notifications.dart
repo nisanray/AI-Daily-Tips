@@ -1,4 +1,5 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter/foundation.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:hive/hive.dart';
@@ -85,10 +86,8 @@ Future<void> showTipNotification(String tip,
     String? tipId,
     int? notificationId,
     String? topic}) async {
-  String body = tip;
-  if (references != null && references.isNotEmpty) {
-    body += '\n\nReferences:\n' + references.join('\n');
-  }
+  debugPrint(
+      '[Notifications] showTipNotification called. useNative=$useNative tipId=$tipId notificationId=$notificationId topic=$topic');
   // Save to Hive
   final tipsBox = Hive.box<TipEntry>('tips');
   await tipsBox.add(TipEntry(tip: tip, references: references));
@@ -106,6 +105,7 @@ Future<void> showTipNotification(String tip,
   };
 
   if (useNative && tipId != null && notificationId != null) {
+    debugPrint('[Notifications] Invoking native notification channel');
     await _nativeNotificationChannel.invokeMethod('showNativeNotification', {
       'tipText': tip,
       'tipId': tipId,
@@ -115,6 +115,7 @@ Future<void> showTipNotification(String tip,
       'topic': topicName,
       'payload': payload,
     });
+    debugPrint('[Notifications] Native notification invoked successfully');
     return;
   }
 
@@ -140,6 +141,7 @@ Future<void> showTipNotification(String tip,
     platformChannelSpecifics,
     payload: payload.toString(),
   );
+  debugPrint('[Notifications] Local notification shown with title="$title"');
 }
 
 String? _extractTitleFromTip(String tip) {
@@ -195,6 +197,8 @@ Future<void> scheduleDailyTipNotification(String tip,
     int intervalDays = 1}) async {
   try {
     tz.initializeTimeZones();
+    debugPrint(
+        '[Notifications] scheduleDailyTipNotification hour=$hour minute=$minute intervalDays=$intervalDays');
     String body = tip;
     if (references != null && references.isNotEmpty) {
       body += '\n\nReferences:\n' + references.join('\n');
@@ -216,6 +220,7 @@ Future<void> scheduleDailyTipNotification(String tip,
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       matchDateTimeComponents: DateTimeComponents.time,
     );
+    debugPrint('[Notifications] Daily tip scheduled successfully');
   } catch (e) {
     // Handle exact alarms permission issues gracefully
     print('Notification scheduling failed: $e');
@@ -241,7 +246,6 @@ Future<void> scheduleAllCustomNotifications(String tip,
   final schedulesBox =
       Hive.box<NotificationScheduleEntry>('notificationSchedules');
   final now = tz.TZDateTime.now(tz.local);
-  int notificationId = 1; // Use unique IDs for multiple notifications
 
   for (var schedule in schedulesBox.values.where((s) => s.enabled)) {
     // Check date range
@@ -412,6 +416,11 @@ Future<void> scheduleSmartTipNotification() async {
         'Focus on ${selectedTopic.topic} today. What small action can you take to improve in this area?',
         references: ['Topic: ${selectedTopic.topic}']);
   }
+}
+
+// Export this function for use in tip_generation_service.dart
+Future<String> generateTipForTopic(String topic, String apiKey) async {
+  return await _generateTipForTopic(topic, apiKey);
 }
 
 Future<String> _generateTipForTopic(String topic, String apiKey) async {

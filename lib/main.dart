@@ -1,11 +1,7 @@
-import 'dart:io';
-// import 'package:alarm/payment_page.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/widgets.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:device_info_plus/device_info_plus.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'models/api_key_entry.dart';
 import 'models/topic_entry.dart';
@@ -163,7 +159,6 @@ class MyApp extends StatelessWidget {
       routes: {
         '/home': (context) => const HomeScreen(),
         '/welcome': (context) => const WelcomeScreen(),
-        '/tip_viewer': (context) => TipViewerScreen(),
       },
     );
   }

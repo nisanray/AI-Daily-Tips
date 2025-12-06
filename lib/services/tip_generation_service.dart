@@ -3,7 +3,8 @@ import 'package:hive/hive.dart';
 import '../models/api_key_entry.dart';
 import '../models/topic_entry.dart';
 import '../models/tip_entry.dart';
-import 'notifications.dart';
+import 'notifications.dart'
+    show generateTipForTopic, scheduleDailyTipNotification;
 
 class TipGenerationService {
   static const int maxDailyTips = 5;
@@ -91,11 +92,6 @@ class TipGenerationService {
     }
   }
 
-  static Future<String> _generateTipForTopic(
-      String topic, String apiKey) async {
-    return await _generateTipForTopicFromNotifications(topic, apiKey);
-  }
-
   static int _getRandomNotificationHour() {
     final random = Random();
     // Generate random hour between 8 AM and 8 PM
@@ -149,20 +145,11 @@ class TipGenerationService {
 
     print('Cleaned up ${tipsToDelete.length} old tips');
   }
-}
 
-// Import the function from notifications.dart
-Future<String> _generateTipForTopicFromNotifications(
-    String topic, String apiKey) async {
-  // This is a placeholder - we'll import the actual function from notifications.dart
-  // For now, return a simple tip
-  final tips = [
-    'Focus on small, consistent actions in $topic today.',
-    'Take 5 minutes to practice $topic techniques.',
-    'Reflect on your progress in $topic this week.',
-    'Set a small, achievable goal related to $topic.',
-    'Share something you learned about $topic with others.',
-  ];
-  final random = Random();
-  return tips[random.nextInt(tips.length)];
+  // Private method that uses the notifications service to generate tips
+  static Future<String> _generateTipForTopic(
+      String topic, String apiKey) async {
+    // Import generateTipForTopic from notifications service
+    return await generateTipForTopic(topic, apiKey);
+  }
 }

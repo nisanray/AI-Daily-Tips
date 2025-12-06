@@ -902,6 +902,18 @@ CRITICAL REQUIREMENTS:
                                     ? null
                                     : _generateRandomTip,
                           ),
+                          const SizedBox(width: 8),
+                          CupertinoButton(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 12),
+                            color: CupertinoColors.systemGrey5,
+                            child: const Icon(CupertinoIcons.bell_fill,
+                                color: CupertinoColors.activeGreen),
+                            onPressed: () async {
+                              // Fire a 5-second test notification
+                              await scheduleTestNotification();
+                            },
+                          ),
                         ],
                       ),
                       if (!hasApiKeys)
@@ -934,6 +946,19 @@ CRITICAL REQUIREMENTS:
                             child: const Icon(CupertinoIcons.bell),
                             onPressed: () async {
                               await _scheduleRandomTipNotification();
+                            },
+                          ),
+                          CupertinoButton(
+                            padding: EdgeInsets.zero,
+                            child: const Icon(CupertinoIcons.eye),
+                            onPressed: () async {
+                              // Quick view: open most recent tip
+                              final tipsBox = Hive.box<TipEntry>('tips');
+                              if (tipsBox.isNotEmpty) {
+                                final tip = tipsBox.values.last;
+                                _navigateToTipPreview(
+                                    tip, _extractTitleFromReferences(tip));
+                              }
                             },
                           ),
                         ],
